@@ -14,7 +14,6 @@ const allMenuItems: MenuItem[] = [
   { index: "/admin/visitors", title: "访客管理", icon: "User", roles: ["admin", "manager"] },
   { index: "/admin/visits", title: "来访记录", icon: "List", roles: ["admin", "manager"] },
   { index: "/admin/users", title: "用户管理", icon: "User", roles: ["admin"] },
-  { index: "/admin/logs", title: "系统日志", icon: "Document", roles: ["admin"] },
   { index: "/admin/settings", title: "系统设置", icon: "Setting", roles: ["admin"] },
 ];
 

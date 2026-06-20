@@ -16,7 +16,6 @@ const router = createRouter({
         { path: "visitors", name: "AdminVisitors", component: () => import("../views/admin-visitors/Index.vue") },
         { path: "visits", name: "AdminVisits", component: () => import("../views/admin-visits/Index.vue") },
         { path: "users", name: "Users", component: () => import("../views/users/Index.vue") },
-        { path: "logs", name: "Logs", component: () => import("../views/logs/Index.vue") },
         { path: "settings", name: "Settings", component: () => import("../views/settings/Index.vue") },
       ],
     },
