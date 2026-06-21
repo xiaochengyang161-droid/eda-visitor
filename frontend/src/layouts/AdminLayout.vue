@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "../stores/auth";
@@ -15,6 +15,7 @@ const allMenuItems: MenuItem[] = [
   { index: "/admin/visits", title: "来访记录", icon: "List", roles: ["admin", "manager"] },
   { index: "/admin/users", title: "用户管理", icon: "User", roles: ["admin"] },
   { index: "/admin/settings", title: "系统设置", icon: "Setting", roles: ["admin"] },
+  { index: "/admin/app-version", title: "APP版本管理", icon: "Upload", roles: ["admin"] },
 ];
 
 const menuItems = computed(() => allMenuItems.filter((item) => item.roles.includes(auth.userRole)));

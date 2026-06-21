@@ -1,4 +1,4 @@
-﻿import { createRouter, createWebHistory } from "vue-router";
+import { createRouter, createWebHistory } from "vue-router";
 import AdminLayout from "../layouts/AdminLayout.vue";
 
 const router = createRouter({
@@ -17,6 +17,7 @@ const router = createRouter({
         { path: "visits", name: "AdminVisits", component: () => import("../views/admin-visits/Index.vue") },
         { path: "users", name: "Users", component: () => import("../views/users/Index.vue") },
         { path: "settings", name: "Settings", component: () => import("../views/settings/Index.vue") },
+        { path: "app-version", name: "AppVersion", component: () => import("../views/app-version/Index.vue") },
       ],
     },
     { path: "/", redirect: "/register" },
