@@ -1,0 +1,1 @@
+import{B as e,I as t,Q as n,d as r,g as i,u as a}from"./runtime-core.esm-bundler-rATHuYmI.js";import{i as o}from"./index-B7JAdQNg.js";var s={};function c(o,s){let c=e(`el-card`);return t(),r(c,null,{header:n(()=>[...s[0]||=[i(`系统设置`,-1)]]),default:n(()=>[s[1]||=a(`p`,null,`系统设置功能开发中...`,-1)]),_:1})}var l=o(s,[[`render`,c]]);export{l as default};

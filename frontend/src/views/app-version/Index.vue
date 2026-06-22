@@ -16,7 +16,8 @@ const form = ref<CreateVersionPayload>({
   version: "",
   title: "",
   content: "",
-  apkUrl: "",
+  apkUrl: "https://openlist.yangspace.cn/@s/EDAVisitor",
+  shareCode: "ah76h",
   forceUpdate: false,
 });
 
@@ -53,7 +54,7 @@ async function handlePublish() {
   try {
     await createVersion({ ...form.value });
     ElMessage.success("Version published");
-    form.value = { version: "", title: "", content: "", apkUrl: "", forceUpdate: false };
+    form.value = { version: "", title: "", content: "", apkUrl: "https://openlist.yangspace.cn/@s/EDAVisitor", shareCode: "ah76h", forceUpdate: false };
     await loadVersions();
   } catch {
     ElMessage.error("Failed to publish version");
@@ -103,6 +104,7 @@ onMounted(() => {
         <p><strong>Content:</strong> {{ currentActive.content }}</p>
         <p><strong>Force Update:</strong> {{ currentActive.forceUpdate ? "Yes" : "No" }}</p>
         <p><strong>APK URL:</strong> {{ currentActive.apkUrl }}</p>
+        <p><strong>Share Code:</strong> {{ currentActive.shareCode || "-" }}</p>
       </template>
       <p v-else style="color: #909399">No active version. Publish one below.</p>
     </el-card>
@@ -121,7 +123,10 @@ onMounted(() => {
           <el-input v-model="form.content" type="textarea" :rows="3" placeholder="Update notes" style="width: 500px" />
         </el-form-item>
         <el-form-item label="APK URL">
-          <el-input v-model="form.apkUrl" placeholder="https://github.com/.../app.apk" style="width: 500px" />
+          <el-input v-model="form.apkUrl" placeholder="https://openlist.yangspace.cn/@s/EDAVisitor" style="width: 500px" />
+        </el-form-item>
+        <el-form-item label="Share Code">
+          <el-input v-model="form.shareCode" placeholder="ah76h" style="width: 200px" />
         </el-form-item>
         <el-form-item label="Force Update">
           <el-checkbox v-model="form.forceUpdate" />

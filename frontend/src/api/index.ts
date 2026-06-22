@@ -1,7 +1,10 @@
-﻿import axios from "axios";
+import axios from "axios";
+import { API_BASE } from "../config/api";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:8787",
+  baseURL: API_BASE,
 });
+
+console.log("[ENV]", import.meta.env.MODE, "API_BASE:", API_BASE || "(relative)");
 
 export default api;

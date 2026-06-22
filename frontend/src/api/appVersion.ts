@@ -6,6 +6,7 @@ export interface AppVersionItem {
   title: string;
   content: string;
   apkUrl: string;
+  shareCode: string;
   forceUpdate: boolean;
   isActive: boolean;
   createdAt: string;
@@ -16,6 +17,7 @@ export interface CreateVersionPayload {
   title: string;
   content: string;
   apkUrl: string;
+  shareCode: string;
   forceUpdate: boolean;
 }
 

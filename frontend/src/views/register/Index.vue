@@ -15,13 +15,9 @@ interface CachedProfile {
 
 const formRef = ref<FormInstance>()
 const submitting = ref(false)
-
 const imageUrl = ref<string>("")
-const uploadState = ref<"idle" | "compressing" | "uploading" | "done" | "error">("idle")
-const uploadProgress = ref(0)
-const uploadedFileName = ref("")
-const compressedInfo = ref("")
-let abortController: AbortController | null = null
+const uploading = ref(false)
+const uploadPercent = ref(0)
 
 const form = reactive({
   name: "", studentId: "", college: "", className: "", phone: "",
@@ -85,39 +81,6 @@ function validateLeaveTime(_: unknown, v: string, cb: (e?: Error) => void) {
 const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 
-function compressImage(file: File): Promise<File> {
-  return new Promise((resolve) => {
-    const img = new Image()
-    const url = URL.createObjectURL(file)
-    img.onload = () => {
-      URL.revokeObjectURL(url)
-      const maxW = 1280
-      let w = img.width, h = img.height
-      if (w > maxW) { h = Math.round(h * (maxW / w)); w = maxW }
-      const canvas = document.createElement("canvas")
-      canvas.width = w; canvas.height = h
-      const ctx = canvas.getContext("2d")
-      if (!ctx) { resolve(file); return }
-      ctx.drawImage(img, 0, 0, w, h)
-      canvas.toBlob((blob) => {
-        if (!blob) { resolve(file); return }
-        const ext = file.type === "image/png" ? "png" : "jpg"
-        const name = file.name.replace(/\.[^.]+$/, "." + ext)
-        const compressed = new File([blob], name, { type: "image/" + ext })
-        const sz = compressed.size
-        compressedInfo.value = sz > 1024 * 1024
-          ? (sz / 1024 / 1024).toFixed(1) + "MB"
-          : Math.round(sz / 1024) + "KB"
-        const pct = Math.round((1 - sz / file.size) * 100)
-        if (pct > 0) compressedInfo.value += " (-" + pct + "%)"
-        resolve(compressed)
-      }, "image/jpeg", 0.8)
-    }
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
-    img.src = url
-  })
-}
-
 async function handleImageUpload(file: File) {
   if (!ALLOWED_TYPES.includes(file.type)) {
     ElMessage.error("仅支持 JPG、PNG、WebP 格式"); return
@@ -125,79 +88,46 @@ async function handleImageUpload(file: File) {
   if (file.size > MAX_FILE_SIZE) {
     ElMessage.error("图片过大，请选择 10MB 以内的图片"); return
   }
-  uploadedFileName.value = file.name
-  uploadState.value = "compressing"
-  uploadProgress.value = 0
-  compressedInfo.value = ""
+  uploading.value = true
+  uploadPercent.value = 0
   try {
-    const compressed = await compressImage(file)
-    uploadState.value = "uploading"
-    abortController = new AbortController()
-    const res = await uploadImage(compressed, {
-      onProgress: (p) => { uploadProgress.value = p },
-      signal: abortController.signal,
+    const res = await uploadImage(file, {
+      onProgress: (p) => { uploadPercent.value = p },
     })
     if (res.url) {
       imageUrl.value = res.url
-      uploadState.value = "done"
       saveProfile()
       ElMessage.success("截图上传成功")
     } else {
-      uploadState.value = "error"
       ElMessage.error("上传返回空地址")
     }
-  } catch (err: unknown) {
-    const e = err as Error
-    if (e?.name === "AbortError" || e?.name === "CanceledError") {
-      uploadState.value = "idle"; return
-    }
-    uploadState.value = "error"
-    if (e?.message?.includes("timeout")) {
-      ElMessage.error("上传超时，请检查网络后重试")
-    } else {
-      ElMessage.error("上传失败，请重试")
-    }
+  } catch (err: any) {
+    ElMessage.error(err?.message || "上传失败，请重试")
   } finally {
-    abortController = null
+    uploading.value = false
   }
-}
-
-function cancelUpload() {
-  if (abortController) { abortController.abort(); abortController = null }
 }
 
 function resetUpload() {
   imageUrl.value = ""
-  uploadState.value = "idle"
-  uploadProgress.value = 0
-  uploadedFileName.value = ""
-  compressedInfo.value = ""
 }
 
 async function handleSubmit() {
   const v = await formRef.value?.validate().catch(() => false)
   if (!v) return
-  const lt = new Date(form.expectedLeaveTime).getTime()
-  const n = Date.now()
-  if (lt <= n) { ElMessage.warning("预计离开时间必须晚于当前时间"); return }
-  if (lt > n + 24 * 60 * 60 * 1000) { ElMessage.warning("预计离开时间不能超过24小时"); return }
   submitting.value = true
   try {
-    const vt = new Date().toISOString()
     await registerVisitor({
       name: form.name, studentId: form.studentId, college: form.college,
       className: form.className, phone: form.phone,
       campusProfileImage: imageUrl.value || undefined,
-      visitTime: vt, expectedLeaveTime: form.expectedLeaveTime,
+      visitTime: new Date().toISOString(),
+      expectedLeaveTime: new Date(form.expectedLeaveTime).toISOString(),
     })
     saveProfile()
-    router.push({
-      path: "/success",
-      query: { name: form.name, studentId: form.studentId, visitTime: vt, expectedLeave: form.expectedLeaveTime },
-    })
-  } catch (err: unknown) {
-    const m = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-    ElMessage.error(m ?? "登记失败")
+    router.push("/success")
+  } catch (err: any) {
+    ElMessage.error(err?.response?.data?.error || "登记失败，请重试")
   } finally {
     submitting.value = false
   }
@@ -232,35 +162,16 @@ onMounted(loadCachedProfile)
         </el-form-item>
 
         <el-form-item label="身份截图">
-          <!-- done -->
-          <div v-if="uploadState === 'done' && imageUrl" class="upload-done">
+          <div v-if="imageUrl" class="upload-done">
             <el-image :src="imageUrl" class="preview-img" fit="contain" />
             <div class="upload-info">
-              <span class="check">&#10003; 已上传</span>
-              <span class="fname">{{ uploadedFileName }}</span>
-              <span v-if="compressedInfo" class="fsize">{{ compressedInfo }}</span>
+              <span class="check">✓ 已上传</span>
               <el-button size="small" text type="primary" @click="resetUpload">重新上传</el-button>
             </div>
           </div>
-          <!-- uploading -->
-          <div v-else-if="uploadState === 'compressing' || uploadState === 'uploading'" class="upload-progress">
-            <span class="status-text">{{ uploadState === 'compressing' ? '压缩中...' : '上传中...' }}</span>
-            <el-progress v-if="uploadState === 'uploading'" :percentage="uploadProgress" :stroke-width="6" />
-            <span v-if="uploadedFileName" class="fname">{{ uploadedFileName }}</span>
-            <el-button v-if="uploadState === 'uploading'" size="small" type="danger" text @click="cancelUpload">取消</el-button>
-          </div>
-          <!-- error -->
-          <div v-else-if="uploadState === 'error'" class="upload-error">
-            <span class="error-text">上传失败</span>
-            <span v-if="uploadedFileName" class="fname">{{ uploadedFileName }}</span>
-            <el-upload :auto-upload="false" :show-file-list="false" accept="image/jpeg,image/png,image/webp" @change="(f: any) => { if (f?.raw) handleImageUpload(f.raw as File) }">
-              <el-button size="small" type="primary">重新上传</el-button>
-            </el-upload>
-          </div>
-          <!-- idle -->
           <div v-else class="upload-empty">
             <el-upload :auto-upload="false" :show-file-list="false" accept="image/jpeg,image/png,image/webp" @change="(f: any) => { if (f?.raw) handleImageUpload(f.raw as File) }">
-              <el-button size="small">上传今日校园截图</el-button>
+              <el-button size="small" :loading="uploading">上传今日校园截图</el-button>
             </el-upload>
             <span class="hint">请上传今日校园主页截图作为身份验证</span>
             <span class="hint2">支持 JPG、PNG、WebP，最大 10MB</span>
@@ -287,12 +198,6 @@ onMounted(loadCachedProfile)
 .preview-img { width: 80px; height: 80px; border-radius: 8px; border: 1px solid #e4e7ed; cursor: pointer; }
 .upload-info { display: flex; flex-direction: column; gap: 4px; }
 .check { font-size: 14px; color: #67c23a; font-weight: 500; }
-.fname { font-size: 12px; color: #909399; }
-.fsize { font-size: 11px; color: #b0b3bb; }
-.upload-progress { display: flex; flex-direction: column; gap: 8px; padding: 4px 0; }
-.status-text { font-size: 14px; color: #409eff; }
-.upload-error { display: flex; flex-direction: column; gap: 6px; padding: 4px 0; }
-.error-text { font-size: 14px; color: #f56c6c; }
 .upload-empty { display: flex; flex-direction: column; gap: 6px; }
 .hint { font-size: 12px; color: #909399; }
 .hint2 { font-size: 11px; color: #c0c4cc; }

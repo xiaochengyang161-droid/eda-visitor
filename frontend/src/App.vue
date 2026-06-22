@@ -3,11 +3,5 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from "vue"
-import { checkUpdate } from "./utils/version"
-
-onMounted(() => {
-  console.log("[APP] App mounted, starting update check...")
-  checkUpdate(false)
-})
+// App root component - no auto-update check
 </script>

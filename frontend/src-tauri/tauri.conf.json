@@ -1,16 +1,13 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "EDA Visitor",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "identifier": "cn.dzsjxh.visitor",
-
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:5173",
     "beforeDevCommand": "pnpm dev",
     "beforeBuildCommand": "pnpm build"
   },
-
   "app": {
     "windows": [
       {
@@ -19,7 +16,9 @@
         "height": 844,
         "resizable": false,
         "fullscreen": false,
-        "maximized": false
+        "maximized": false,
+        "url": "index.html",
+        "label": "main"
       }
     ]
   }

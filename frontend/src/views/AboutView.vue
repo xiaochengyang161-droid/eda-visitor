@@ -1,10 +1,26 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue"; import { checkUpdate } from "../utils/version";
-const appVersion = ref("..."); const checking = ref(false);
-async function loadVersion() { try { const { getVersion } = await import("@tauri-apps/api/app"); appVersion.value = await getVersion(); } catch { appVersion.value = "1.0.0"; } }
-async function handleCheckUpdate() { checking.value = true; await checkUpdate(true); checking.value = false; }
-function openGitHub() { try { window.open("https://github.com/xiaochengyang161-droid/eda-visitor", "_blank"); } catch {} }
-onMounted(loadVersion);
+import { ref, onMounted } from "vue"
+import { checkUpdate } from "../utils/update"
+
+const appVersion = ref("")
+const checking = ref(false)
+
+async function loadVersion() {
+  try {
+    const { getVersion } = await import("@tauri-apps/api/app")
+    appVersion.value = await getVersion()
+  } catch {
+    appVersion.value = import.meta.env.VITE_APP_VERSION || "1.0.1"
+  }
+}
+
+async function handleCheckUpdate() {
+  checking.value = true
+  await checkUpdate()
+  checking.value = false
+}
+
+onMounted(loadVersion)
 </script>
 
 <template>
@@ -15,7 +31,9 @@ onMounted(loadVersion);
       <h3>电子设计协会访客管理系统</h3>
       <p class="sub">EDA Visitor System</p>
       <el-descriptions :column="1" border size="small" style="margin-top:16px">
-        <el-descriptions-item label="版本"><el-tag type="primary">V{{ appVersion }}</el-tag></el-descriptions-item>
+        <el-descriptions-item label="版本">
+          <el-tag type="primary">{{ appVersion ? "V" + appVersion : "..." }}</el-tag>
+        </el-descriptions-item>
         <el-descriptions-item label="前端">Vue 3 + TypeScript</el-descriptions-item>
         <el-descriptions-item label="后端">Cloudflare Workers</el-descriptions-item>
         <el-descriptions-item label="数据库">Cloudflare D1</el-descriptions-item>
@@ -25,16 +43,15 @@ onMounted(loadVersion);
 
       <el-card shadow="never" class="info-card">
         <div class="info-title">图片上传说明</div>
-        <div class="info-item">自动压缩优化 (最大宽度 1280px)</div>
         <div class="info-item">支持格式：JPG、PNG、WebP</div>
         <div class="info-item">单文件最大：10MB</div>
-        <div class="info-item">推荐上传今日校园主页截图</div>
+        <div class="info-item">建议上传：今日校园主页截图</div>
+        <div class="info-item">上传过程显示实时进度</div>
       </el-card>
 
-      <div class="act"><el-button type="primary" :loading="checking" block @click="handleCheckUpdate">检查更新</el-button></div>
       <div class="act">
-        <el-button block @click="openGitHub">
-          <el-icon style="margin-right:6px"><Link /></el-icon>GitHub 项目地址
+        <el-button type="primary" :loading="checking" block @click="handleCheckUpdate">
+          检查更新
         </el-button>
       </div>
     </el-card>

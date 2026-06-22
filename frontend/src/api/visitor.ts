@@ -22,11 +22,6 @@ export interface AdminVisitItem {
 
 export interface AdminVisitsResponse { total: number; page: number; pageSize: number; items: AdminVisitItem[]; }
 
-export interface UploadOptions {
-  onProgress?: (percent: number) => void;
-  signal?: AbortSignal;
-}
-
 export async function registerVisitor(payload: RegisterPayload): Promise<{ success: boolean }> {
   const res = await api.post<{ success: boolean }>("/visitor/register", payload);
   return res.data;
@@ -49,17 +44,32 @@ export async function getAdminVisits(params: {
   return res.data;
 }
 
+export interface UploadOptions {
+  onProgress?: (percent: number) => void;
+}
+
 export async function uploadImage(file: File, options?: UploadOptions): Promise<{ url: string }> {
+  console.log("[UPLOAD] API_BASE =", api.defaults.baseURL)
+  console.log("[UPLOAD] URL =", `${api.defaults.baseURL}/upload`)
+  console.log("[UPLOAD] file =", file.name)
+  console.log("[UPLOAD] size =", file.size)
+
   const formData = new FormData();
   formData.append("file", file);
-  const res = await api.post<{ url: string }>("/upload", formData, {
-    timeout: 30000,
-    signal: options?.signal,
-    onUploadProgress: (e) => {
-      if (e.total && options?.onProgress) {
-        options.onProgress(Math.round((e.loaded / e.total) * 100));
-      }
-    },
-  });
-  return res.data;
+  try {
+    const res = await api.post<{ url: string }>("/upload", formData, {
+      timeout: 30000,
+      onUploadProgress: (event) => {
+        if (event.total) {
+          const percent = Math.round((event.loaded * 100) / event.total)
+          options?.onProgress?.(percent)
+        }
+      },
+    });
+    console.log("[UPLOAD] SUCCESS", res.data)
+    return res.data;
+  } catch (error: any) {
+    console.error("[UPLOAD] FAILED", error?.message)
+    throw error
+  }
 }
