@@ -1,155 +1,47 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted } from "vue";
 import { ElMessage } from "element-plus";
 import { getVisitorHistory } from "../../api/visitor";
 import type { VisitHistoryItem } from "../../api/visitor";
 import api from "../../api/index";
-import VisitorNav from "../../components/VisitorNav.vue";
 import { formatDateTime } from "../../utils/datetime";
-
-interface CachedProfile {
-  name: string; studentId: string; college: string; className: string; phone: string;
-}
-
-const CACHE_KEY = "eda_visitor_profile";
-
-const loading = ref(false);
-const records = ref<VisitHistoryItem[]>([]);
-const leavingId = ref<number | null>(null);
-const leavingLoading = ref(false);
-const currentTime = ref(formatDateTime(new Date().toISOString()));
-let timer: ReturnType<typeof setInterval> | null = null;
-
-const form = reactive({
-  studentId: "",
-  phone: "",
-});
-
-const rules = {
-  studentId: [{ required: true, message: "请输入学号", trigger: "blur" }],
-  phone: [{ required: true, message: "请输入手机号", trigger: "blur" }],
-};
-
-function loadCachedProfile() {
-  const cached = localStorage.getItem(CACHE_KEY);
-  if (cached) {
-    try {
-      const p: CachedProfile = JSON.parse(cached);
-      form.studentId = p.studentId;
-      form.phone = p.phone;
-      handleQuery();
-    } catch { /* ignore */ }
-  }
-}
-
-async function handleQuery() {
-  const id = form.studentId.trim();
-  const phone = form.phone.trim();
-  if (!id || !phone) { ElMessage.warning("请输入学号和手机号"); return; }
-  loading.value = true;
-  try {
-    records.value = await getVisitorHistory(id);
-    records.value = records.value.filter((r) => !r.actual_leave_time);
-    if (records.value.length === 0) {
-      ElMessage.info("没有待离开的来访记录");
-    }
-  } catch {
-    ElMessage.error("查询失败");
-  } finally {
-    loading.value = false;
-  }
-}
-
-async function handleLeave(record: VisitHistoryItem, _idx: number) {
-  leavingId.value = _idx;
-  leavingLoading.value = true;
-  try {
-    await api.put("/visitor/leave/" + record.id);
-    ElMessage.success("离开登记成功，时间：" + formatDateTime(new Date().toISOString()));
-    await handleQuery();
-  } catch (err: unknown) {
-    const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-    if (msg === "该记录已登记离开") {
-      ElMessage.warning("该记录已登记离开");
-      await handleQuery();
-    } else {
-      ElMessage.error(msg ?? "离开登记失败");
-    }
-  } finally {
-    leavingId.value = null;
-    leavingLoading.value = false;
-  }
-}
-
-onMounted(() => {
-  loadCachedProfile();
-  timer = setInterval(() => { currentTime.value = formatDateTime(new Date().toISOString()); }, 1000);
-});
-
-onUnmounted(() => {
-  if (timer) clearInterval(timer);
-});
+interface CachedProfile { name: string; studentId: string; college: string; className: string; phone: string; }
+const CACHE_KEY = "eda_visitor_profile"; const loading = ref(false); const records = ref<VisitHistoryItem[]>([]); const leavingId = ref<number | null>(null); const leavingLoading = ref(false); const currentTime = ref(formatDateTime(new Date().toISOString())); let timer: ReturnType<typeof setInterval> | null = null; const form = reactive({ studentId: "", phone: "" });
+function loadCachedProfile() { const c = localStorage.getItem(CACHE_KEY); if (c) { try { const p: CachedProfile = JSON.parse(c); form.studentId = p.studentId; form.phone = p.phone; handleQuery(); } catch {} } }
+async function handleQuery() { if (!form.studentId.trim() || !form.phone.trim()) { ElMessage.warning("请输入学号和手机号"); return; } loading.value = true; try { records.value = (await getVisitorHistory(form.studentId.trim())).filter(r => !r.actual_leave_time); if (records.value.length === 0) ElMessage.info("没有待离开的来访记录"); } catch { ElMessage.error("查询失败"); } finally { loading.value = false; } }
+async function handleLeave(record: VisitHistoryItem) { leavingId.value = record.id; leavingLoading.value = true; try { await api.put("/visitor/leave/" + record.id); ElMessage.success("离开登记成功"); await handleQuery(); } catch (err: unknown) { const m = (err as {response?:{data?:{error?:string}}})?.response?.data?.error; ElMessage.error(m ?? "离开登记失败"); } finally { leavingId.value = null; leavingLoading.value = false; } }
+onMounted(() => { loadCachedProfile(); timer = setInterval(() => { currentTime.value = formatDateTime(new Date().toISOString()); }, 1000); });
+onUnmounted(() => { if (timer) clearInterval(timer); });
 </script>
 
 <template>
-  <div style="min-height:100vh;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)">
-    <VisitorNav />
-    <div style="padding:40px 20px">
-      <el-card style="max-width:640px;margin:0 auto">
-        <template #header>
-          <div style="text-align:center;font-size:18px;font-weight:bold">离开登记</div>
-        </template>
-
-        <div style="text-align:center;margin-bottom:16px;font-size:28px;font-family:monospace;color:#303133">
-          {{ currentTime }}
-        </div>
-
-        <el-form
-          :model="form"
-          :rules="rules"
-          :inline="true"
-          style="margin-bottom:16px"
-        >
-          <el-form-item label="学号" prop="studentId">
-            <el-input
-              v-model="form.studentId"
-              placeholder="输入学号"
-              clearable
-              style="width:180px"
-              @keyup.enter="handleQuery"
-            />
-          </el-form-item>
-          <el-form-item label="手机号" prop="phone">
-            <el-input
-              v-model="form.phone"
-              placeholder="输入手机号"
-              clearable
-              style="width:180px"
-              @keyup.enter="handleQuery"
-            />
-          </el-form-item>
-          <el-form-item>
-            <el-button type="primary" @click="handleQuery">查询</el-button>
-          </el-form-item>
-        </el-form>
-
-        <el-table :data="records" stripe v-loading="loading" empty-text="暂无待离开记录">
-          <el-table-column label="到访时间" width="170"><template #default="{ row }">{{ formatDateTime(row.visit_time) }}</template></el-table-column>
-          <el-table-column label="预计离开" width="170"><template #default="{ row }">{{ formatDateTime(row.expected_leave_time) }}</template></el-table-column>
-          <el-table-column label="操作" width="120">
-            <template #default="{ $index }">
-              <el-button
-                type="danger"
-                size="small"
-                :loading="leavingId === $index && leavingLoading"
-                @click="handleLeave(records[$index], $index)"
-              >
-                确认离开
-              </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
+  <div class="page-container">
+    <h2 class="title">离开登记</h2>
+    <div class="clock">{{ currentTime }}</div>
+    <el-card class="search-card">
+      <el-form :inline="true" size="small">
+        <el-form-item label="学号"><el-input v-model="form.studentId" placeholder="输入学号" clearable style="width:140px" @keyup.enter="handleQuery" /></el-form-item>
+        <el-form-item label="手机号"><el-input v-model="form.phone" placeholder="输入手机号" clearable style="width:140px" @keyup.enter="handleQuery" /></el-form-item>
+        <el-form-item><el-button type="primary" @click="handleQuery">查询</el-button></el-form-item>
+      </el-form>
+    </el-card>
+    <div v-loading="loading" class="list">
+      <el-empty v-if="!loading && records.length === 0" description="暂无待离开记录" />
+      <el-card v-for="row in records" :key="row.id" class="rec" shadow="hover">
+        <div class="row"><div><div class="t">到访 {{ formatDateTime(row.visit_time) }}</div><div class="s">预计离开 {{ formatDateTime(row.expected_leave_time) }}</div></div><el-button type="danger" :loading="leavingId === row.id && leavingLoading" @click="handleLeave(row)">确认离开</el-button></div>
       </el-card>
     </div>
   </div>
 </template>
+
+<style scoped>
+.page-container { max-width: 520px; margin: 0 auto; width: 100%; }
+.title { margin-top: 12px; margin-bottom: 12px; font-size: 20px; font-weight: 700; color: #303133; }
+.clock { text-align: center; font-size: 32px; font-family: monospace; color: #303133; margin-bottom: 16px; font-weight: 600; }
+.search-card { margin-bottom: 16px; border-radius: 12px; }
+.list { display: flex; flex-direction: column; gap: 10px; }
+.rec { border-radius: 10px; }
+.row { display: flex; align-items: center; justify-content: space-between; }
+.t { font-size: 15px; font-weight: 600; color: #303133; }
+.s { font-size: 13px; color: #909399; margin-top: 2px; }
+</style>

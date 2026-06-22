@@ -7,6 +7,7 @@ import { onMounted } from "vue"
 import { checkUpdate } from "./utils/version"
 
 onMounted(() => {
-  checkUpdate()
+  console.log("[APP] App mounted, starting update check...")
+  checkUpdate(false)
 })
 </script>

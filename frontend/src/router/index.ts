@@ -1,13 +1,21 @@
 import { createRouter, createWebHistory } from "vue-router";
 import AdminLayout from "../layouts/AdminLayout.vue";
+import MobileLayout from "../layouts/MobileLayout.vue";
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: "/register", name: "Register", component: () => import("../views/register/Index.vue") },
+    {
+      path: "/",
+      component: MobileLayout,
+      children: [
+        { path: "", name: "Register", component: () => import("../views/register/Index.vue") },
+        { path: "history", name: "History", component: () => import("../views/history/Index.vue") },
+        { path: "leave", name: "Leave", component: () => import("../views/leave/Index.vue") },
+        { path: "about", name: "About", component: () => import("../views/AboutView.vue") },
+      ],
+    },
     { path: "/success", name: "Success", component: () => import("../views/success/Index.vue") },
-    { path: "/history", name: "History", component: () => import("../views/history/Index.vue") },
-    { path: "/leave", name: "Leave", component: () => import("../views/leave/Index.vue") },
     { path: "/login", name: "Login", component: () => import("../views/login/Index.vue") },
     {
       path: "/admin", component: AdminLayout, redirect: "/admin/dashboard",
@@ -20,11 +28,10 @@ const router = createRouter({
         { path: "app-version", name: "AppVersion", component: () => import("../views/app-version/Index.vue") },
       ],
     },
-    { path: "/", redirect: "/register" },
   ],
 });
 
-const PUBLIC_PATHS = ["/register", "/success", "/history", "/leave", "/login", "/"];
+const PUBLIC_PATHS = ["/", "/history", "/leave", "/about", "/success", "/login"];
 
 router.beforeEach(async (to, _from, next) => {
   if (PUBLIC_PATHS.includes(to.path)) {

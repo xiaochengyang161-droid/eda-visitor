@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "电子设计协会访客管理系统",
+  "productName": "EDA Visitor",
   "version": "1.0.0",
   "identifier": "cn.dzsjxh.visitor",
 
@@ -14,9 +14,12 @@
   "app": {
     "windows": [
       {
-        "title": "电子设计协会访客管理系统",
-        "width": 800,
-        "height": 600
+        "title": "EDA Visitor",
+        "width": 390,
+        "height": 844,
+        "resizable": false,
+        "fullscreen": false,
+        "maximized": false
       }
     ]
   }

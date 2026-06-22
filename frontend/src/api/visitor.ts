@@ -1,4 +1,4 @@
-﻿import api from "./index";
+import api from "./index";
 
 export interface RegisterPayload {
   name: string; studentId: string; college: string; className: string;
@@ -22,6 +22,11 @@ export interface AdminVisitItem {
 
 export interface AdminVisitsResponse { total: number; page: number; pageSize: number; items: AdminVisitItem[]; }
 
+export interface UploadOptions {
+  onProgress?: (percent: number) => void;
+  signal?: AbortSignal;
+}
+
 export async function registerVisitor(payload: RegisterPayload): Promise<{ success: boolean }> {
   const res = await api.post<{ success: boolean }>("/visitor/register", payload);
   return res.data;
@@ -44,9 +49,17 @@ export async function getAdminVisits(params: {
   return res.data;
 }
 
-export async function uploadImage(file: File): Promise<{ url: string }> {
+export async function uploadImage(file: File, options?: UploadOptions): Promise<{ url: string }> {
   const formData = new FormData();
   formData.append("file", file);
-  const res = await api.post<{ url: string }>("/upload", formData);
+  const res = await api.post<{ url: string }>("/upload", formData, {
+    timeout: 30000,
+    signal: options?.signal,
+    onUploadProgress: (e) => {
+      if (e.total && options?.onProgress) {
+        options.onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    },
+  });
   return res.data;
 }
